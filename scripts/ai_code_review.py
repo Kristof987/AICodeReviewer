@@ -99,6 +99,14 @@ def post_pr_comment(comment):
     response.raise_for_status()
 
 
+def build_comment_with_metadata(review_body, prompt_profile):
+    return (
+        "## AI Code Review\n\n"
+        f"**Prompt profile:** `{prompt_profile}`\n\n"
+        f"{review_body}"
+    )
+
+
 def main():
     print("AI reviewer script started")
 
@@ -117,7 +125,12 @@ def main():
     print("Changed files:", changed_files)
 
     if not changed_files:
-        post_pr_comment("## AI Code Review\n\nNo reviewable changed source files found.")
+        post_pr_comment(
+            build_comment_with_metadata(
+                "No reviewable changed source files found.",
+                prompt_profile,
+            )
+        )
         return
 
     files = {
@@ -133,7 +146,7 @@ def main():
 
     print("Review preview:", review[:500])
 
-    post_pr_comment(review)
+    post_pr_comment(build_comment_with_metadata(review, prompt_profile))
 
     print("Comment posted successfully")
 
