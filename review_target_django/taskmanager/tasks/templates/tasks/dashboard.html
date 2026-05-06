@@ -1,0 +1,14 @@
+{% extends 'tasks/base.html' %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="card">
+    <p>Quote: {{ quote }}</p>
+    <p>Projects: {{ project_count }}</p>
+    <p>Users: {{ user_count }}</p>
+    <p>Done: {{ done }}</p>
+    <p>Todo: {{ todo }}</p>
+    <p>In progress: {{ in_progress }}</p>
+    <p>Overdue: {{ overdue }}</p>
+    <p>Total estimated hours: {{ total_estimate }}</p>
+</div>
+{% endblock %}

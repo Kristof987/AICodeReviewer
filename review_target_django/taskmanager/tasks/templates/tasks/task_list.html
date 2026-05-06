@@ -1,0 +1,41 @@
+{% extends 'tasks/base.html' %}
+{% block content %}
+<h1>Tasks</h1>
+<p><a href="{% url 'task_create' %}">Create task</a></p>
+<form method="get">
+    <input name="q" placeholder="Search" value="{{ q }}">
+    <select name="status">
+        <option value="">Any status</option>
+        <option value="todo">Todo</option>
+        <option value="in_progress">In progress</option>
+        <option value="done">Done</option>
+    </select>
+    <select name="priority">
+        <option value="">Any priority</option>
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+    </select>
+    <button>Filter</button>
+</form>
+<p>Total estimated hours: {{ total_hours }} | Overdue: {{ overdue_count }}</p>
+<table>
+    <tr><th>Title</th><th>Project</th><th>Assigned</th><th>Status</th><th>Priority</th><th>Actions</th></tr>
+    {% for task in tasks %}
+    <tr>
+        <td>{% if task.is_overdue %}<span class="danger">!</span>{% endif %} {{ task.title }}</td>
+        <td>{{ task.project.name }}</td>
+        <td>{{ task.assigned_to }}</td>
+        <td>{{ task.status }}</td>
+        <td>{{ task.priority }}</td>
+        <td>
+            <a href="{% url 'task_edit' task.id %}">Edit</a>
+            <a href="{% url 'task_done' task.id %}">Done</a>
+            <a href="{% url 'task_delete' task.id %}">Delete</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No tasks.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

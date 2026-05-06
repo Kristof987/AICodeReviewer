@@ -1,0 +1,151 @@
+name: ChatGPT Code Review Debug
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        if: github.event.action == 'opened'
+        uses: actions/checkout@v3
+
+      - name: Checkout repository (for new commits)
+        if: github.event.action == 'synchronize'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Get Latest Two Commit Hashes
+        run: |
+          LATEST_COMMIT=$(git log --pretty=format:"%H" -n 1)
+          PREVIOUS_COMMIT=$(git log --pretty=format:"%H" -n 2 | tail -n1)
+          
+          echo "Latest Commit: $LATEST_COMMIT"
+          echo "Previous Commit: $PREVIOUS_COMMIT"
+          
+          echo "LATEST_COMMIT=$LATEST_COMMIT" >> $GITHUB_ENV
+          echo "PREVIOUS_COMMIT=$PREVIOUS_COMMIT" >> $GITHUB_ENV
+          
+          mkdir -p tmp
+
+      - name: Get changed files
+        if: github.event.action == 'opened'
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+
+      - name: Get changed files (for new commits)
+        if: github.event.action == 'synchronize'
+        run: |
+          echo "New commit added to PR. Analyzing only the last commit...."
+
+          CHANGED_FILES=$(git diff --name-only $PREVIOUS_COMMIT $LATEST_COMMIT | tr '\n' ' ')
+          
+          if [[ -z "$CHANGED_FILES" ]]; then
+            echo "No files changed in the last commit."
+            echo "CHANGED_FILES=" >> $GITHUB_ENV
+          else
+            echo "Changed files: $CHANGED_FILES"
+            echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
+          fi
+          
+      - name: Set unified CHANGED_FILES variable
+        run: |
+          if [[ "${{ github.event.action }}" == "opened" ]]; then
+            echo "PR opened. Analyzing all files..."
+            echo "CHANGED_FILES=${{ steps.changed-files.outputs.all_modified_files }}" >> $GITHUB_ENV
+          fi
+
+      - name: Debug PR Number
+        run: |
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+
+      - name: Print changed files
+        run: |
+          echo "Final changed files list: $CHANGED_FILES"
+
+      - name: Print modified files' content
+        run: |
+          for file in ${{ env.CHANGED_FILES }}; do
+            if [[ -f "$file" ]]; then
+              echo "Processing file: $file"
+              echo "--------------------------------"
+              cat "$file"
+              echo "--------------------------------"
+            else
+              echo "File not found: $file (Skipping)"
+            fi
+          done
+
+      - name: Install dependencies
+        run: | 
+          python -m pip install --upgrade pip
+          pip install openai jq
+          pip install --upgrade langchain langchain-community openai
+          pip install ruff
+          pip install PyGithub
+
+      - name: Run Ruff and save JSON output
+        run: |
+          mkdir -p lint_reports
+          ruff check . --select ALL --output-format json > lint_reports/ruff_output.json || true
+
+      - name: Print Ruff JSON output to logs
+        run: cat lint_reports/ruff_output.json
+
+      - name: Run Python Script and Capture Output
+        id: get_excluded_files
+        run: |
+          result=$(python -u .llmignore/llmignore_files.py)
+          echo "::set-output name=excluded_files::$result"
+
+      - name: Analyze code with ChatGPT
+        id: chatgpt_review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: bash
+        run: |
+          python .github/scripts/control_agent.py "${{ steps.get_excluded_files.outputs.excluded_files }}" "${{ env.CHANGED_FILES }}"
+
+      - name: Add dot at the start of every line in every text file
+        run: |
+          echo "Adding dot prefix to each line..."
+          find . -type f -not -path "./.git/*" -not -path "./tmp/*" | grep -v "pr_inline_comment.py" | while read file; do
+            if file "$file" | grep -q "text"; then
+              sed -i 's/^/./' "$file"
+            fi
+          done
+
+      - name: Create temporary commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          
+          git commit -m "Temporary commit to enable full file review"
+
+      - name: Post inline review comments
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_NUMBER: ${{ github.event.pull_request.number }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "Posting inline review comments..."
+          python .github/scripts/pr_inline_comment.py
+
+      - name: Reset repository to discard temporary commit
+        run: |
+          echo "Resetting repository to clean state..."
+          git reset --hard HEAD~1

@@ -1,0 +1,8 @@
+{% extends 'tasks/base.html' %}
+{% block content %}
+<h1>{{ project.name }}</h1>
+<p>{{ project.description }}</p>
+<div class="card"><h2>High priority</h2>{% for task in high_tasks %}<p>{{ task.title }}</p>{% empty %}<p>None</p>{% endfor %}</div>
+<div class="card"><h2>Medium priority</h2>{% for task in medium_tasks %}<p>{{ task.title }}</p>{% empty %}<p>None</p>{% endfor %}</div>
+<div class="card"><h2>Low priority</h2>{% for task in low_tasks %}<p>{{ task.title }}</p>{% empty %}<p>None</p>{% endfor %}</div>
+{% endblock %}

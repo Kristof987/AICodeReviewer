@@ -1,0 +1,16 @@
+{% extends 'tasks/base.html' %}
+{% block content %}
+<h1>Projects</h1>
+<p><a href="{% url 'project_create' %}">Create project</a></p>
+<table>
+<tr><th>Name</th><th>Tasks</th><th>Done</th><th>Overdue</th></tr>
+{% for row in project_rows %}
+<tr>
+    <td><a href="{% url 'project_detail' row.project.id %}">{{ row.project.name }}</a></td>
+    <td>{{ row.task_count }}</td>
+    <td>{{ row.done_count }}</td>
+    <td>{{ row.overdue_count }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

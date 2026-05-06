@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Task Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7; }
+        nav a { margin-right: 12px; }
+        .card { background: white; padding: 18px; margin: 12px 0; border-radius: 8px; box-shadow: 0 1px 4px #ddd; }
+        .danger { color: darkred; }
+        .done { color: green; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+        input, select, textarea { padding: 6px; margin: 4px; }
+        button { padding: 8px 12px; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="{% url 'task_list' %}">Tasks</a>
+    <a href="{% url 'project_list' %}">Projects</a>
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    {% if user.is_authenticated %}
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">{% csrf_token %}<button>Logout</button></form>
+    {% else %}
+        <a href="{% url 'login' %}">Login</a>
+    {% endif %}
+</nav>
+<hr>
+{% for message in messages %}<p>{{ message }}</p>{% endfor %}
+{% block content %}{% endblock %}
+</body>
+</html>
