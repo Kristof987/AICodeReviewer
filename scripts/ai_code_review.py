@@ -4,6 +4,7 @@ from pathlib import Path
 
 import requests
 from openai import OpenAI
+from prompts import PROMPT_BUILDERS
 
 
 MAX_FILE_CHARS = 12000
@@ -57,64 +58,12 @@ def read_file_safely(file_path):
     return text
 
 
-def build_prompt(files):
-    file_blocks = []
+def build_prompt(files, prompt_profile):
+    if prompt_profile not in PROMPT_BUILDERS:
+        available = ", ".join(PROMPT_BUILDERS.keys())
+        raise ValueError(f"Invalid PROMPT_PROFILE: {prompt_profile}. Available: {available}")
 
-    for filename, content in files.items():
-        file_blocks.append(
-            f"""
-File: {filename}
-
-~~~text
-{content}
-~~~
-"""
-        )
-
-    joined_files = "\n\n".join(file_blocks)
-
-    return f"""
-You are a senior software engineer doing a pull request code review.
-
-Review only the changed files below.
-
-Focus on:
-- bugs
-- security issues
-- performance problems
-- duplicated code
-- bad naming
-- missing validation
-- refactoring opportunities
-- maintainability
-- Django/Python best practices if applicable
-
-Return the review in Markdown.
-
-Use this structure:
-
-## AI Code Review
-
-### Summary
-Short summary.
-
-### Issues Found
-For each issue:
-- file name
-- problem
-- why it matters
-- suggested fix
-
-### Suggested Improvements
-Concrete refactoring or optimization ideas.
-
-### Risk Level
-Low / Medium / High
-
-Changed files:
-
-{joined_files}
-"""
+    return PROMPT_BUILDERS[prompt_profile](files)
 
 
 def call_openai(prompt):
@@ -156,10 +105,12 @@ def main():
     base_sha = os.environ.get("BASE_SHA")
     head_sha = os.environ.get("HEAD_SHA")
     pr_number = os.environ.get("PR_NUMBER")
+    prompt_profile = os.environ.get("PROMPT_PROFILE", "general_minimal")
 
     print("BASE_SHA:", base_sha)
     print("HEAD_SHA:", head_sha)
     print("PR_NUMBER:", pr_number)
+    print("PROMPT_PROFILE:", prompt_profile)
 
     changed_files = get_changed_files(base_sha, head_sha)
 
@@ -174,7 +125,7 @@ def main():
         for file in changed_files
     }
 
-    prompt = build_prompt(files)
+    prompt = build_prompt(files, prompt_profile)
 
     print("Prompt length:", len(prompt))
 

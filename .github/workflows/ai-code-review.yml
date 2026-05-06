@@ -11,6 +11,14 @@ permissions:
 jobs:
   ai-review:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        prompt_profile:
+          - general_minimal
+          - refactor_minimal
+          - refactor_few_shot
+          - refactor_few_shot_cot
 
     steps:
       - name: Checkout PR code
@@ -34,4 +42,5 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PROMPT_PROFILE: ${{ matrix.prompt_profile }}
         run: python scripts/ai_code_review.py
