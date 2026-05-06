@@ -24,7 +24,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r scripts/requirements-review.txt
+        run: pip install -r review_target_django/taskmanager/requirements.txt
 
       - name: Run AI reviewer
         env:
