@@ -9,5 +9,5 @@ The solution contains:
 
 How to run:
   - Checkout the repo
-  - Run this command ```streamlit run .\ai_code_review.py```
+  - Run this command from root: ```streamlit run .\ai_code_review.py```
   - Add your OpenAI API key
